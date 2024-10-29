@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     tools { 
-        gradle 'my-gradle'  // Use your Gradle installation name here
+        gradle 'my-gradle'  // Tên cấu hình Gradle đã cài đặt trên Jenkins
     }
     environment {
-        POSTGRES_LOGIN = credentials('postgresql')  // Ensure this credential is set up with PostgreSQL username and password
+        POSTGRES_LOGIN = credentials('postgresql')  // Đảm bảo đã thiết lập credential cho PostgreSQL
     }
     stages {
 
@@ -13,15 +13,15 @@ pipeline {
             steps {
                 sh 'gradle --version'
                 sh 'java -version'
-                sh 'gradle clean build -x test'  // -x test ignores tests if they should be optional
+                sh './gradlew clean bootJar -x test'  // Build JAR file mà không chạy tests
             }
         }
 
         stage('Packaging/Pushing image') {
             steps {
                 withDockerRegistry(credentialsId: 'dockerhub', url: 'https://index.docker.io/v1/') {
-                    sh 'docker build -t mydocker/springboot-jenkins .'
-                    sh 'docker push mydocker/springboot-jenkins'
+                    sh 'docker build -t thongnguyen120600/springboot-jenkins .'  // Build image từ Dockerfile trong thư mục gốc
+                    sh 'docker push thongnguyen120600/springboot-jenkins'
                 }
             }
         }
@@ -37,26 +37,25 @@ pipeline {
 
                 sh "docker run --name thongnguyen-postgres --rm --network dev -v thongnguyen-postgres-data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=${POSTGRES_LOGIN_PSW} -e POSTGRES_DB=db_example -d postgres:15"
                 sh 'sleep 20'
-                sh "docker exec -i thongnguyen-postgres psql -U postgres -d db_example -f script.sql"
-
+                
             }
         }
 
         stage('Deploy Spring Boot to DEV') {
             steps {
                 echo 'Deploying and cleaning Spring Boot'
-                sh 'docker image pull mydocker/springboot'
+                sh 'docker image pull thongnguyen120600/springboot-jenkins'  // Pull image từ Docker Hub sau khi đã push
                 sh 'docker container stop thongnguyen-springboot || echo "this container does not exist"'
                 sh 'docker network create dev || echo "this network exists"'
                 sh 'echo y | docker container prune'
 
-                sh 'docker container run -d --rm --name thongnguyen-springboot -p 8081:8080 --network dev mydocker/springboot'
+                sh 'docker container run -d --rm --name thongnguyen-springboot -p 8081:8080 --network dev thongnguyen120600/springboot-jenkins'
             }
         }
- 
     }
+
     post {
-        // Clean after build
+        // Clean sau khi build
         always {
             cleanWs()
         }
