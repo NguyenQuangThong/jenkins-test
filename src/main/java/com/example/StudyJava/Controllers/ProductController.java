@@ -1,6 +1,8 @@
 package com.example.StudyJava.Controllers;
 
 import com.example.StudyJava.DTOs.ProductDTO;
+import com.example.StudyJava.Models.Product;
+import com.example.StudyJava.Repositories.ProductRepository;
 import com.example.StudyJava.Services.ProductService;
 import com.example.StudyJava.Services.S3Service;
 import org.modelmapper.ModelMapper;
@@ -20,6 +22,8 @@ public class ProductController {
 
     @Autowired
     private ModelMapper modelMapper;
+    @Autowired
+    private ProductRepository productRepository;
 
 //    @Autowired
 //    private S3Service s3Service;
@@ -32,6 +36,13 @@ public class ProductController {
     @GetMapping("/products/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Long id) {
         return ResponseEntity.ok(modelMapper.map(productService.getProductById(id), ProductDTO.class));
+    }
+
+    @PostMapping("/products")
+    public ResponseEntity<ProductDTO> createProduct(@RequestBody ProductDTO productDTO) {
+        Product product = modelMapper.map(productDTO, Product.class);
+        productRepository.save(product);
+        return ResponseEntity.ok(modelMapper.map(product, ProductDTO.class));
     }
 
 //    @PostMapping("/uploads")
